@@ -1,0 +1,165 @@
+<html ng-app>
+  <head>
+    <title>Melissa 40th Birthday RSVP</title>
+    <link rel='icon' href='favicon.ico' type='image/png' />
+     <!--[if lte IE 8]> <script src="/js/lib/json2.js"></script> <![endif]-->
+    <style>
+      html, body {
+        background-color:#fefefe;
+        color:#4D4D4D;
+      }
+      html,body,td,th {font:normal 12px/20px helvetica,arial,sans-serif;}
+      a:link, a:visited, a:active { color: #FF94BB; text-decoration:none;}
+      a:hover { color:#EB2A73; text-decoration:underline;}
+      div, form {margin:0px 0px; padding:0px 0px; line-height:18px;}
+      input {
+        padding: 1px;
+        background-color: white;
+        border: 2px inset #FFC7DB;
+      }      
+      #view {
+        margin:20px auto;
+        width:617px;
+        min-height:438px;
+        background: #fefefe url('background.png') no-repeat top left; 
+      }
+      #rsvp {
+        padding-top:210px;
+      }
+      #rsvp p {
+        width:320px;
+        text-align: center;
+        font-size:14px;
+      }
+      #rsvp p a {
+        font-size:12px;
+      }
+      #guest_list {
+        border-spacing:0;
+        border-collapse:collapse;
+        width:360px;
+      }
+      #guest_list th {
+        background-color: #FFE8F0;
+        color:#333; 
+        border-bottom:1px solid #FFC7DB;
+      }
+      #guest_list td {
+        border-bottom:1px solid #FFE8F0;
+      }
+      #guest_list .current td {
+        padding:5px 5px;
+        font-size:14px; font-weight:bold;
+        background-color:#FFE8F0;
+      }
+      #user_message {
+        overflow: hidden; zoom:1;
+        position: absolute; top:0px; left:0px;
+        height:0px;
+        background-color:#FFE8F0;
+        text-align:center;
+        width:352px; 
+        
+        -webkit-transition-duration: 0.8s;
+        -moz-transition-duration: 0.8s;
+        transition-duration: 0.8s;
+      }
+      #user_message.active { 
+        height:60px; 
+        border:4px solid #FFC7DB;
+      }      
+    </style>
+  </head>
+  <body>
+  	<div id="view" ng-controller="rsvpCtrl">
+      <div id="rsvp">
+        <p style="color:#f040A7">come giftless, kidless & wearing something pink!</p>
+        <p>Thursday, December 20, 2012, 6:00pm-midnight</p>
+        <p>Miners Foundry 
+          <a target="_new" href="http://minersfoundry.org/lodging/">lodging</a>
+          <a target="_new" href="http://goo.gl/r3i8z">directions</a>
+        </p>
+        <div style="position:relative; width:360px; margin-bottom:15px;">
+
+          <form id="frm_rsvp" style="margin-top:10px">
+            <div>
+              <input type="text" ng-model="rsvp.name" placeholder="your name" style="width:260px"/>
+              <select ng-model="rsvp.guests" name="guests">
+                <option value=""># of people</option>
+                <option>1</option>
+                <option>2</option>
+              </select>
+            </div>
+            <div>
+              <input type="text" ng-model="rsvp.email" placeholder="email address" style="width:128px"/>
+              <input type="text" ng-model="rsvp.phone" placeholder="phone" style="width:128px"/>
+            </div>
+            <button ng-click="saveRSVP(rsvp)">RSVP</button> <span style="color:#999;font-size:13px"> or call troy @ 916-749-2661</span>
+          </form>
+          <div id="user_message" ng-class="{active:userMessage.active==true}">
+            <h1 style="color:#FF619A; font-size:14px; padding:3px 0px; margin:5px 0px;">{{userMessage.title}}</h1>
+            {{userMessage.text}}
+          </div>
+
+        </div>
+      </div>
+      <table id="guest_list">
+        <thead>
+          <tr><th>Guest</th><th style="border-left:3px solid #fefefe;">Peeps ({{guests.count}})</th></tr>
+        </thead>
+        <tbody style="height:48px; overflow:auto;">
+        <tr ng-repeat="guest in guests.guests" ng-class="{current:guest.name == rsvp.name}" ng-click="tt(guest)">
+          <td>{{guest.name}}</td><td style="text-align:right">{{guest.guests}}</td>
+        </tr>
+        <tbody>
+      </table>
+
+    </div>
+    <script src="/js/lib/angular.min.js"></script>
+    <script>
+      function rsvpCtrl($scope, $http, $timeout) {
+        
+        $http({method: 'GET', url: '/guests'}).
+          success(function(data, status, headers, config) {
+            $scope.guests = data;
+          }).
+          error(function(data, status, headers, config) {
+            $scope.showUserMessage('Oh Snap!', 'Call Troy, app not working right ;)',true);
+          });
+
+        $scope.rsvp = (function(localStorage,JSON){
+          if (!localStorage || !JSON) return({});
+          var CACHE;
+          CACHE = localStorage.getItem('CACHE');
+          CACHE = CACHE ? JSON.parse(CACHE) : {};
+          CACHE.$setLocal = function setLocal(override) {
+            var value = JSON.stringify(override || CACHE);
+            //return value;
+            localStorage.setItem('CACHE',value);
+          };
+          return CACHE;
+
+        })(window.localStorage, window.JSON);
+
+        $scope.saveRSVP = function saveRSVP(rsvp) {
+          if (rsvp.$setLocal) rsvp.$setLocal();
+          console.log(rsvp);
+          $http.post('/rsvp', rsvp).
+            success(function(data, status, headers, config) {
+              $scope.guests = data;
+              $scope.showUserMessage('Sweetness!', 'Your RSVP information has been saved');
+            }).
+            error(function(data, status, headers, config) {
+              $scope.showUserMessage('Maybe You need Help?', 'Your RSVP has not been SAVED, try entering a name.');
+            });
+
+        };
+
+        $scope.showUserMessage = function(title,text,persist) { 
+          $scope.userMessage = { active:true, title: title, text: text };
+          if (persist!==true) $timeout(function(){ delete $scope.userMessage }, 4000);
+        };
+      }
+    </script>
+  </body>
+</html>
